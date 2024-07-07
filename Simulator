@@ -1,0 +1,111 @@
+--// services
+ 
+local replicated_storage = game:GetService("ReplicatedStorage")
+local run_service = game:GetService("RunService")
+local players = game:GetService("Players")
+ 
+--// defined
+ 
+local localplayer = players.LocalPlayer
+ 
+--// tables
+ 
+local __script = {
+    remotes = {
+        train = replicated_storage["Events"]["Train"],
+        multiplier = replicated_storage["Functions"]["Multiplier"]
+    },
+    arguments = {
+        train = {
+            punch = "Strength",
+            pushup = "Endurance",
+            psychic = "Psychic",
+ 
+        },
+        multiplier = {
+            pushup = "EnduranceMultiplier",
+            psychic = "PsychicMultiplier",
+            punch = "StrengthMultiplier",
+            speed = "SpeedMultiplier",
+        }
+    },
+    storage = {
+        variables = {
+            circle_angle = 0
+        }
+    }
+}
+ 
+local features = {
+    auto_punch = { 
+        enabled = false,
+        remote = __script.remotes["train"],
+        argument = __script.arguments["train"]["punch"],
+    },
+    auto_pushup = { 
+        enabled = false,
+        remote = __script.remotes["train"],
+        argument = __script.arguments["train"]["pushup"],
+    },
+    auto_psychic = {
+        enabled = false,
+        remote = __script.remotes["train"],
+        argument = __script.arguments["train"]["psychic"],
+    },
+    auto_speed = {
+        enabled = true,
+        logic = function()
+            if localplayer.Character and localplayer.Character:FindFirstChildOfClass("Humanoid") then
+ 
+                local humanoid = localplayer.Character:FindFirstChildOfClass("Humanoid")
+                local angle = __script.storage.variables.circle_angle
+                __script.storage.variables.circle_angle = __script.storage.variables.circle_angle + 1
+ 
+                humanoid:Move(Vector3.new(math.cos(angle) * 15, 0, math.sin(angle) * 15), false)
+ 
+            end
+        end
+    },
+    auto_upgrade = {
+        enabled = true,
+        remote = __script.remotes["multiplier"],
+        selection = {"Endurance", "Psychic", "Strength", "Speed"},
+    },
+    auto_chest = {
+        enabled = true,
+        logic = function()
+            if localplayer.Character and localplayer.Character:FindFirstChild("HumanoidRootPart") then
+                for _, chest in workspace["MiniChests"]:GetChildren() do
+                    if chest:IsA("BasePart") then
+                        chest.CFrame = CFrame.new(game.Players.LocalPlayer.Character.HumanoidRootPart.Position)
+                        fireclickdetector(chest:FindFirstChildOfClass("ClickDetector"))
+                    end
+                end
+            end
+        end
+    }
+}
+ 
+--// rest
+ 
+do --// main
+ 
+    task.spawn(function()
+        while task.wait() do
+            for _, feature in features do
+                if feature["enabled"] then
+ 
+                    if (feature["remote"] and feature["argument"]) then
+                        feature["remote"]:FireServer(feature["argument"])
+                    elseif feature["logic"] and typeof(feature["logic"]) == "function" then
+                        feature["logic"]()
+                    elseif feature["selection"] and typeof(feature["selection"]) == "table" then
+                        feature["remote"]:InvokeServer(feature["selection"][math.random(1, #feature["selection"])] .. "Multiplier")
+                    end
+ 
+                end
+            end
+        end
+    end)
+ 
+end
